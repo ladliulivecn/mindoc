@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/astaxie/beego"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/lifei6671/gocaptcha"
 	"github.com/lifei6671/mindoc/conf"
 	"github.com/lifei6671/mindoc/mail"
@@ -55,6 +56,106 @@ func (c *AccountController) Prepare() {
 				c.ShowErrorPage(403, "非法请求")
 			}
 		}
+	}
+}
+
+//免登陆跳转 by lad
+func (c *AccountController) AvoidLogin() {
+	c.Prepare()
+	var remember CookieRemember
+	tokenString := c.GetString("token")
+	clienttype, _ := c.GetInt("type")
+	u := c.GetString("url")
+	if tokenString != "" && u != "" && c.Ctx.Input.IsGet() {
+		type Claims struct {
+			NS  int
+			uid int
+			jwt.StandardClaims
+		}
+		var claims Claims
+		token, _ := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {
+			return []byte(beego.AppConfig.DefaultString("jwt_token_secret", "this is token secret key")), nil
+		})
+		if token.Valid {
+			//fmt.Printf("valid claims: %+v\n", claims);
+			//fmt.Printf("valid token: %+v\n", token);
+			member, err := models.NewMember().LoginByType(claims.Issuer, clienttype)
+			if err == nil {
+				//如果有必要的参数，则直接设置cookie，并且跳转指定页面
+				remember.MemberId = member.MemberId
+				remember.Account = member.Account
+				remember.Time = time.Now()
+				v, err := utils.Encode(remember)
+				if err == nil {
+					c.SetSecureCookie(conf.GetAppKey(), "login", v, time.Now().Add(time.Hour*24*30).Unix())
+				}
+				c.Redirect(u, 302)
+			}
+		}
+	}
+	c.TplName = "account/login.tpl"
+	if member, ok := c.GetSession(conf.LoginSessionName).(models.Member); ok && member.MemberId > 0 {
+		u := c.GetString("url")
+		if u == "" {
+			u = c.Ctx.Request.Header.Get("Referer")
+		}
+		if u == "" {
+			u = conf.URLFor("HomeController.Index")
+		}
+		c.Redirect(u, 302)
+	}
+
+	// 如果 Cookie 中存在登录信息
+	if cookie, ok := c.GetSecureCookie(conf.GetAppKey(), "login"); ok {
+		if err := utils.Decode(cookie, &remember); err == nil {
+			if member, err := models.NewMember().Find(remember.MemberId); err == nil {
+				c.SetMember(*member)
+				c.LoggedIn(false)
+				c.StopRun()
+			}
+		}
+	}
+	if c.Ctx.Input.IsPost() {
+		account := c.GetString("account")
+		password := c.GetString("password")
+		captcha := c.GetString("code")
+		isRemember := c.GetString("is_remember")
+
+		// 如果开启了验证码
+		if v, ok := c.Option["ENABLED_CAPTCHA"]; ok && strings.EqualFold(v, "true") {
+			v, ok := c.GetSession(conf.CaptchaSessionName).(string)
+			if !ok || !strings.EqualFold(v, captcha) {
+				c.JsonResult(6001, "验证码不正确")
+			}
+		}
+
+		if account == "" || password == "" {
+			c.JsonResult(6002, "账号或密码不能为空")
+		}
+
+		member, err := models.NewMember().Login(account, password)
+		if err == nil {
+			member.LastLoginTime = time.Now()
+			_ = member.Update("last_login_time")
+
+			c.SetMember(*member)
+
+			if strings.EqualFold(isRemember, "yes") {
+				remember.MemberId = member.MemberId
+				remember.Account = member.Account
+				remember.Time = time.Now()
+				v, err := utils.Encode(remember)
+				if err == nil {
+					c.SetSecureCookie(conf.GetAppKey(), "login", v, time.Now().Add(time.Hour*24*30).Unix())
+				}
+			}
+			c.JsonResult(0, "ok", c.referer())
+		} else {
+			beego.Error("用户登录 ->", err)
+			c.JsonResult(500, "账号或密码错误", nil)
+		}
+	} else {
+		c.Data["url"] = c.referer()
 	}
 }
 
@@ -117,7 +218,7 @@ func (c *AccountController) Login() {
 				remember.Time = time.Now()
 				v, err := utils.Encode(remember)
 				if err == nil {
-					c.SetSecureCookie(conf.GetAppKey(), "login", v, time.Now().Add(time.Hour * 24 * 30).Unix())
+					c.SetSecureCookie(conf.GetAppKey(), "login", v, time.Now().Add(time.Hour*24*30).Unix())
 				}
 			}
 

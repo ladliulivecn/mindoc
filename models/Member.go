@@ -62,7 +62,22 @@ func (m *Member) TableNameWithPrefix() string {
 func NewMember() *Member {
 	return &Member{}
 }
-
+//查找用户
+func (m *Member) LoginByType(membertype string, clienttype int) (*Member, error) {
+	o := orm.NewOrm()
+	member := &Member{}
+	//err := o.QueryTable(m.TableNameWithPrefix()).Filter("account", account).Filter("status", 0).One(member)
+	err := o.Raw("select member.* from md_members member," +
+		" md_auth_member auth_member where auth_member.member_type = ?" +
+		" and auth_member.type = ? and member.account = auth_member.account" +
+		" and status = 0 limit 1;", membertype, clienttype).QueryRow(member)
+	if err != nil {
+		logs.Error("用户登录 ->", err)
+		return member, ErrMemberNoExist
+	}
+	m.ResolveRoleName()
+	return member, nil
+}
 // Login 用户登录.
 func (m *Member) Login(account string, password string) (*Member, error) {
 	o := orm.NewOrm()

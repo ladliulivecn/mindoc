@@ -82,14 +82,14 @@ func (c *AccountController) AvoidLogin() {
 			member, err := models.NewMember().LoginByType(claims.Issuer, clienttype)
 			if err == nil {
 				//如果有必要的参数，则直接设置cookie，并且跳转指定页面
+				//c.SetMember(*member)
 				remember.MemberId = member.MemberId
 				remember.Account = member.Account
 				remember.Time = time.Now()
-				c.SetSession(conf.LoginSessionName, remember)
-				//v, err := utils.Encode(remember)
-				//if err == nil {
-				//	c.SetSecureCookie(conf.GetAppKey(), "login", v, time.Now().Add(time.Hour*24*30).Unix())
-				//}
+				v, err := utils.Encode(remember)
+				if err == nil {
+					c.SetSecureCookie(conf.GetAppKey(), "login", v, time.Now().Add(time.Hour*24*30).Unix())
+				}
 				c.Redirect(u, 302)
 			}
 		}else{

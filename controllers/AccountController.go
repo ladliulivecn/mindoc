@@ -77,10 +77,11 @@ func (c *AccountController) AvoidLogin() {
 			return []byte(beego.AppConfig.DefaultString("jwt_token_secret", "this is token secret key")), nil
 		})
 		if token.Valid {
-			//fmt.Printf("valid claims: %+v\n", claims);
+			beego.Warn("Avoid login token valid" , claims)
 			//fmt.Printf("valid token: %+v\n", token);
 			member, err := models.NewMember().LoginByType(claims.Issuer, clienttype)
 			if err == nil {
+				beego.Warn("Avoid login success", member)
 				//如果有必要的参数，则直接设置cookie，并且跳转指定页面
 				//c.SetMember(*member)
 				remember.MemberId = member.MemberId
@@ -93,7 +94,7 @@ func (c *AccountController) AvoidLogin() {
 				c.Redirect(u, 302)
 			}
 		}else{
-			beego.Warn("Avoid login token invalid", token)
+			beego.Warn("Avoid login token invalid", claims)
 		}
 	}else{
 		beego.Warn("Avoid login failed", u, tokenString);

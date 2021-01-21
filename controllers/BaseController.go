@@ -44,6 +44,7 @@ func (c *BaseController) Prepare() {
 	c.EnableDocumentHistory = false
 
 	if member, ok := c.GetSession(conf.LoginSessionName).(models.Member); ok && member.MemberId > 0 {
+		//beego.Warn("GetSession member", member)
 		c.Member = &member
 		c.Data["Member"] = c.Member
 	} else {

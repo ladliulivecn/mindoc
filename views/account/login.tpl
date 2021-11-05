@@ -78,6 +78,9 @@
                 {{end}}
                 {{end}}
             </form>
+            <div class="form-group">
+               <button type="button" id="btn-wxlogin" class="btn btn-success" style="width: 100%"  data-loading-text="正在登录..." autocomplete="off">微信授权登录</button>
+            </div>
         </div>
     </div>
     <div class="clearfix"></div>
@@ -98,7 +101,20 @@
                 $("#btn-login").click();
             }
         });
-
+        $("#btn-wxlogin").on('click', function () {
+            var PRODUCT_DOMAIN = "doc.yoursclass.com";
+            var currdomain = "{{.BaseUrl}}";
+            var LOGIN_DOMAIN = "https://manage.yoursclass.com";
+            var appid = "wx5a3bcf6bdba05189";
+            if(currdomain.indexOf(PRODUCT_DOMAIN) === -1){
+                LOGIN_DOMAIN = "https://manage-test.yoursclass.com";
+                appid = "wx6a24bcd3344dea65";
+            }
+            LOGIN_DOMAIN += "/yike_mgr/views/wxlogin/loginmindoc/"
+             + appid + "?redirect_uri=" + encodeURIComponent("{{.url}}")
+             ;
+            window.location.href = LOGIN_DOMAIN;
+        });
         $("#btn-login").on('click', function () {
             $(this).tooltip('destroy').parents('.form-group').removeClass('has-error');
             var $btn = $(this).button('loading');

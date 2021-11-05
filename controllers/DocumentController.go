@@ -1281,6 +1281,6 @@ func promptUserToLogIn(c *DocumentController) {
 	if c.IsAjax() {
 		c.JsonResult(6000, "请重新登录。")
 	} else {
-		c.Redirect(conf.URLFor("AccountController.Login")+"?url="+url.PathEscape(conf.BaseUrl+c.Ctx.Request.URL.RequestURI()), 302)
+		c.Redirect(conf.URLFor("AccountController.AvoidLogin")+"?url="+url.PathEscape(conf.BaseUrl+c.Ctx.Request.URL.RequestURI()), 302)
 	}
 }

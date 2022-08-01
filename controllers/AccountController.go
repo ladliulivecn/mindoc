@@ -79,11 +79,14 @@ func (c *AccountController) AvoidLogin() {
 		if token.Valid {
 			beego.Warn("Avoid login token valid" , claims)
 			//fmt.Printf("valid token: %+v\n", token);
+			c.SetMember(models.Member{})
+			c.SetSecureCookie(conf.GetAppKey(), "login", "", -3600)
+			beego.Warn("Avoid login clear exist login info")
 			member, err := models.NewMember().LoginByType(claims.Issuer, clienttype)
 			if err == nil {
 				beego.Warn("Avoid login success", member)
 				//如果有必要的参数，则直接设置cookie，并且跳转指定页面
-				//c.SetMember(*member)
+				c.SetMember(*member)
 				remember.MemberId = member.MemberId
 				remember.Account = member.Account
 				remember.Time = time.Now()
